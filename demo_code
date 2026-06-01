@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Welding Arm - Interactive 3D Simulator</title>
+    <!-- Tailwind CSS for functional utility layout -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * { font-family: 'Poppins', sans-serif; }
+        body { margin: 0; background: #0a0e27; color: white; overflow-x: hidden; padding: 20px; }
+        
+        /* Glass Panel Card & Tech Tags */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            transition: all 0.3s ease;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .skill-tag {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        /* Robot Demo Container */
+        #robot-demo-container {
+            width: 100%;
+            height: 320px;
+            background: linear-gradient(135deg, #0a0e27, #1a1a2e);
+            border-radius: 0 0 12px 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Robot Demo Layout */
+        .robot-demo-layout {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        .robot-3d-box {
+            flex: 1;
+            min-width: 0;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(219, 112, 147, 0.6);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .robot-box-header {
+            background: linear-gradient(135deg, #db7093, #c71585);
+            color: white;
+            padding: 10px 15px;
+            font-weight: 600;
+            font-size: 14px;
+            text-align: center;
+        }
+        .robot-controls-container {
+            width: 280px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .control-box {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid rgba(219, 112, 147, 0.5);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .control-box-header {
+            background: linear-gradient(135deg, rgba(219, 112, 147, 0.3), rgba(199, 21, 133, 0.3));
+            color: #db7093;
+            padding: 8px 12px;
+            font-weight: 600;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(219, 112, 147, 0.3);
+        }
+        .control-box-body {
+            padding: 12px;
+        }
+        .slider-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .slider-control label {
+            color: #e2e8f0;
+            font-size: 11px;
+            width: 55px;
+            flex-shrink: 0;
+        }
+        .slider-control input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #db7093, #c71585);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .slider-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(219, 112, 147, 0.8);
+        }
+        .slider-control span {
+            color: #db7093;
+            font-size: 10px;
+            width: 35px;
+            text-align: right;
+        }
+        .weld-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(219, 112, 147, 0.3);
+        }
+        .weld-control span {
+            color: #888;
+            font-size: 11px;
+        }
+        .weld-btn {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+        .weld-btn:hover {
+            box-shadow: 0 0 15px rgba(249, 115, 22, 0.6);
+            transform: scale(1.02);
+        }
+        .weld-btn.active {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            animation: weldPulse 0.3s infinite alternate;
+        }
+        @keyframes weldPulse {
+            from { box-shadow: 0 0 5px #ff6b00; }
+            to { box-shadow: 0 0 20px #ff6b00, 0 0 40px #ff4500; }
+        }
+        
+        /* Car Direction Pad */
+        .car-pad {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .direction-pad {
+            display: grid;
+            grid-template-areas:
+                ". up ."
+                "left center right"
+                ". down .";
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 5px;
+            width: 140px;
+            margin: 0 auto;
+        }
+        .pad-btn {
+            background: linear-gradient(135deg, #db7093, #c71585);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pad-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 12px rgba(219, 112, 147, 0.7);
+        }
+        .pad-btn:active {
+            transform: scale(0.95);
+        }
+        .pad-btn.up { grid-area: up; }
+        .pad-btn.down { grid-area: down; }
+        .pad-btn.left { grid-area: left; }
+        .pad-btn.right { grid-area: right; }
+        .pad-btn.center { 
+            grid-area: center; 
+            background: linear-gradient(135deg, #4b5563, #374151);
+        }
+        .special-controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        .special-btn {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 9px;
+        }
+        .special-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.6);
+        }
+        .special-btn:active {
+            transform: scale(0.95);
+        }
+        .special-btn span {
+            font-size: 8px;
+            opacity: 0.9;
+        }
+        
+        /* Robot Details Info Box styling */
+        .robot-project-details {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(219, 112, 147, 0.3);
+        }
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .detail-section h4 {
+            color: #db7093;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .detail-section ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .detail-section ul li {
+            color: #94a3b8;
+            font-size: 12px;
+            padding: 5px 0;
+            padding-left: 15px;
+            position: relative;
+        }
+        .detail-section ul li::before {
+            content: '▸';
+            color: #db7093;
+            position: absolute;
+            left: 0;
+        }
+        .tech-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 15px;
+        }
+        .action-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .robot-demo-layout { flex-direction: column; }
+            .robot-controls-container { width: 100%; flex-direction: row; flex-wrap: wrap; }
+            .control-box { flex: 1; min-width: 200px; }
+            #robot-demo-container { height: 280px; }
+            .direction-pad { width: 120px; }
+            .pad-btn { width: 35px; height: 35px; }
+            .details-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="max-w-6xl mx-auto">
+        <h2 class="text-3xl font-bold mb-6 gradient-text">Robot Welding Arm Demonstration</h2>
+
+        <div class="robot-demo-layout flex flex-col lg:flex-row w-full gap-3 lg:gap-6">
+            <!-- Left: 3D Robot Container -->
+            <div class="robot-3d-box w-full lg:w-1/2">
+                <div class="robot-box-header">🤖 Robot Welding Arm Canvas</div>
+                <div id="robot-demo-container"></div>
+            </div>
+            
+            <!-- Right: Controls Panels -->
+            <div class="robot-controls-container w-full lg:w-1/2 flex flex-col gap-4">
+                <!-- Arm Kinematics Sliders -->
+                <div class="control-box">
+                    <div class="control-box-header">🔥 Welding Arm Kinematics</div>
+                    <div class="control-box-body">
+                        <div class="slider-control">
+                            <label>Base</label>
+                            <input type="range" id="robot-base" min="-180" max="180" value="0">
+                            <span id="robot-base-val">0°</span>
+                        </div>
+                        <div class="slider-control">
+                            <label>Shoulder</label>
+                            <input type="range" id="robot-shoulder" min="-90" max="90" value="-30">
+                            <span id="robot-shoulder-val">-30°</span>
+                        </div>
+                        <div class="slider-control">
+                            <label>Elbow</label>
+                            <input type="range" id="robot-elbow" min="-120" max="120" value="45">
+                            <span id="robot-elbow-val">45°</span>
+                        </div>
+                        <div class="slider-control">
+                            <label>Wrist</label>
+                            <input type="range" id="robot-wrist" min="-90" max="90" value="30">
+                            <span id="robot-wrist-val">30°</span>
+                        </div>
+                        <div class="slider-control">
+                            <label>Roll</label>
+                            <input type="range" id="robot-roll" min="-180" max="180" value="0">
+                            <span id="robot-roll-val">0°</span>
+                        </div>
+                        <div class="weld-control">
+                            <button id="weld-toggle" class="weld-btn" onclick="toggleWelding()">🔥 Start Welding</button>
+                            <span id="weld-status">OFF</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chassis Navigation Panel -->
+                <div class="control-box">
+                    <div class="control-box-header">🚗 Chassis Driving Panel</div>
+                    <div class="control-box-body">
+                        <div class="car-pad">
+                            <!-- Direction pad -->
+                            <div class="direction-pad">
+                                <button class="pad-btn up" onmousedown="moveRobot('forward')" onmouseup="stopRobot()" ontouchstart="moveRobot('forward')" ontouchend="stopRobot()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 4l-8 8h5v8h6v-8h5z"/></svg>
+                                </button>
+                                <button class="pad-btn left" onmousedown="moveRobot('left')" onmouseup="stopRobot()" ontouchstart="moveRobot('left')" ontouchend="stopRobot()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M4 12l8-8v5h8v6h-8v5z"/></svg>
+                                </button>
+                                <button class="pad-btn center" onmousedown="moveRobot('stop')">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                                </button>
+                                <button class="pad-btn right" onmousedown="moveRobot('right')" onmouseup="stopRobot()" ontouchstart="moveRobot('right')" ontouchend="stopRobot()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M20 12l-8-8v5h-8v6h8v5z"/></svg>
+                                </button>
+                                <button class="pad-btn down" onmousedown="moveRobot('backward')" onmouseup="stopRobot()" ontouchstart="moveRobot('backward')" ontouchend="stopRobot()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 20l8-8h-5v-8h-6v8h-5z"/></svg>
+                                </button>
+                            </div>
+                            <!-- Special mobility buttons -->
+                            <div class="special-controls">
+                                <button class="special-btn" onmousedown="moveRobot('rotateLeft')" onmouseup="stopRobot()" ontouchstart="moveRobot('rotateLeft')" ontouchend="stopRobot()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 4C7.58 4 4 7.58 4 12H1l4 4 4-4H6c0-3.31 2.69-6 6-6s6 2.69 6 6-2.69 6-6 6v2c4.42 0 8-3.58 8-8s-3.58-8-8-8z"/></svg>
+                                    <span>Rotate L</span>
+                                </button>
+                                <button class="special-btn" onmousedown="moveRobot('strafe')" onmouseup="stopRobot()" ontouchstart="moveRobot('strafe')" ontouchend="stopRobot()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M6 12l4-4v3h4v-3l4 4-4 4-4-3h-4v3z"/></svg>
+                                    <span>Strafe</span>
+                                </button>
+                                <button class="special-btn" onmousedown="moveRobot('rotateRight')" onmouseup="stopRobot()" ontouchstart="moveRobot('rotateRight')" ontouchend="stopRobot()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 4c4.42 0 8 3.58 8 8h3l-4 4-4-4h3c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6v2c-4.42 0-8-3.58-8-8s3.58-8 8-8z"/></svg>
+                                    <span>Rotate R</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="robot-project-details">
+            <div class="details-grid">
+                <div class="detail-section">
+                    <h4>📋 Project Description</h4>
+                    <ul>
+                        <li>Designed automated robotic welding arm using microcontroller-based control systems and sensor integrations</li>
+                        <li>Configured precision high-torque micro-servo components and optimized welding coordinate translation paths</li>
+                        <li>Improved welding consistency and path execution accuracy via specialized controlled motion logic algorithms</li>
+                    </ul>
+                </div>
+                <div class="detail-section">
+                    <h4>🛠️ Technologies Applied</h4>
+                    <div class="tech-tags">
+                        <span class="skill-tag px-3 py-1 rounded-full text-xs">Microcontroller</span>
+                        <span class="skill-tag px-3 py-1 rounded-full text-xs">C++</span>
+                        <span class="skill-tag px-3 py-1 rounded-full text-xs">Automation</span>
+                        <span class="skill-tag px-3 py-1 rounded-full text-xs">Three.js</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load official ThreeJS dependency library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        var robotScene, robotCamera, robotRenderer;
+        var robotArm = {};
+        var robotAnimationId;
+        var isWelding = false;
+        var weldingSparks = [];
+        var weldingLight = null;
+        var robotMovement = null;
+        var robotChassis = null;
+        var mecanumWheels = [];
+        var weldingSparkInterval = null;
+
+        function initRobotArm() {
+            var container = document.getElementById('robot-demo-container');
+            if (!container) return;
+
+            robotScene = new THREE.Scene();
+            robotCamera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            robotCamera.position.set(4, 3, 5);
+            robotCamera.lookAt(0, 1.5, 0);
+
+            robotRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            robotRenderer.setSize(container.clientWidth, container.clientHeight);
+            robotRenderer.setClearColor(0x0a0e27, 1);
+            container.appendChild(robotRenderer.domElement);
+
+            // Lights positioning
+            var ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            robotScene.add(ambientLight);
+
+            var light1 = new THREE.DirectionalLight(0xffffff, 0.9);
+            light1.position.set(10, 10, 5);
+            robotScene.add(light1);
+
+            var light2 = new THREE.DirectionalLight(0xdb7093, 0.4);
+            light2.position.set(-10, 10, -5);
+            robotScene.add(light2);
+
+            var light3 = new THREE.DirectionalLight(0xffffff, 0.7);
+            light3.position.set(0, 15, 0);
+            robotScene.add(light3);
+            
+            var light4 = new THREE.PointLight(0xdb7093, 0.5, 20);
+            light4.position.set(3, 5, 3);
+            robotScene.add(light4);
+            
+            // Ground elements
+            var floorGeom = new THREE.PlaneGeometry(10, 10);
+            var floorMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x1a1a2e, 
+                emissive: 0x050510,
+                side: THREE.DoubleSide 
+            });
+            var floor = new THREE.Mesh(floorGeom, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -0.1;
+            robotScene.add(floor);
+            
+            var gridHelper = new THREE.GridHelper(8, 16, 0x444466, 0x222244);
+            gridHelper.position.y = -0.09;
+            robotScene.add(gridHelper);
+
+            createRobotArmMesh();
+            setupRobotControls();
+            animateRobot();
+        }
+
+        function createRobotArmMesh() {
+            var darkPink = 0xDB7093;
+            var darkPinkDeep = 0xC71585;
+            var darkPinkLight = 0xE75480;
+            var darkGray = 0x2a2a2a;
+            
+            var armMaterial = new THREE.MeshPhongMaterial({ color: darkPink, emissive: 0x4a1a2a, shininess: 80 });
+            var armMaterialDark = new THREE.MeshPhongMaterial({ color: darkPinkDeep, emissive: 0x3a1020, shininess: 80 });
+            var jointMaterial = new THREE.MeshPhongMaterial({ color: darkPinkLight, emissive: 0x4a2030, shininess: 100 });
+            var chassisMaterial = new THREE.MeshPhongMaterial({ color: darkGray, emissive: 0x111111 });
+            var wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x1a1a1a, emissive: 0x050505 });
+            var wheelRollerMaterial = new THREE.MeshPhongMaterial({ color: 0xffcc00, emissive: 0x332200 });
+
+            // Base chassis
+            robotChassis = new THREE.Group();
+            robotScene.add(robotChassis);
+            
+            var chassisGeom = new THREE.BoxGeometry(2.4, 0.3, 1.6);
+            var chassis = new THREE.Mesh(chassisGeom, chassisMaterial);
+            chassis.position.y = 0.4;
+            robotChassis.add(chassis);
+            
+            var topPlateGeom = new THREE.BoxGeometry(2.2, 0.1, 1.4);
+            var topPlateMaterial = new THREE.MeshPhongMaterial({ color: 0x3a3a3a, emissive: 0x111111 });
+            var topPlate = new THREE.Mesh(topPlateGeom, topPlateMaterial);
+            topPlate.position.y = 0.6;
+            robotChassis.add(topPlate);
+
+            // Mecanum Wheels setup
+            function createMecanumWheel(x, z, mirror) {
+                var wheelGroup = new THREE.Group();
+                var wheelGeom = new THREE.CylinderGeometry(0.3, 0.3, 0.25, 24);
+                var wheel = new THREE.Mesh(wheelGeom, wheelMaterial);
+                wheel.rotation.z = Math.PI / 2;
+                wheelGroup.add(wheel);
+                
+                var hubGeom = new THREE.CylinderGeometry(0.12, 0.12, 0.28, 16);
+                var hub = new THREE.Mesh(hubGeom, new THREE.MeshPhongMaterial({ color: darkPink }));
+                hub.rotation.z = Math.PI / 2;
+                wheelGroup.add(hub);
+                
+                var rollerCount = 8;
+                for (var i = 0; i < rollerCount; i++) {
+                    var angle = (i / rollerCount) * Math.PI * 2;
+                    var rollerGeom = new THREE.CylinderGeometry(0.06, 0.06, 0.18, 8);
+                    var roller = new THREE.Mesh(rollerGeom, wheelRollerMaterial);
+                    
+                    roller.position.x = Math.cos(angle) * 0.22;
+                    roller.position.z = Math.sin(angle) * 0.22;
+                    roller.rotation.x = Math.PI / 2;
+                    roller.rotation.z = mirror ? -Math.PI / 4 : Math.PI / 4;
+                    
+                    wheelGroup.add(roller);
+                }
+                
+                wheelGroup.position.set(x, 0.2, z);
+                return wheelGroup;
+            }
+            
+            var wheel1 = createMecanumWheel(-0.9, -0.9, false);
+            var wheel2 = createMecanumWheel(0.9, -0.9, true);
+            var wheel3 = createMecanumWheel(-0.9, 0.9, true);
+            var wheel4 = createMecanumWheel(0.9, 0.9, false);
+            robotChassis.add(wheel1);
+            robotChassis.add(wheel2);
+            robotChassis.add(wheel3);
+            robotChassis.add(wheel4);
+            mecanumWheels = [wheel1, wheel2, wheel3, wheel4];
+
+            // 5 Axis Mecano joint arm setup
+            var baseGeometry = new THREE.CylinderGeometry(0.5, 0.6, 0.2, 32);
+            var base = new THREE.Mesh(baseGeometry, armMaterialDark);
+            base.position.y = 0.75;
+            robotChassis.add(base);
+
+            robotArm.rotatingBase = new THREE.Group();
+            robotArm.rotatingBase.position.y = 0.85;
+            robotChassis.add(robotArm.rotatingBase);
+
+            var rotatingBaseGeom = new THREE.CylinderGeometry(0.4, 0.45, 0.3, 32);
+            var rotatingBaseMesh = new THREE.Mesh(rotatingBaseGeom, armMaterial);
+            rotatingBaseMesh.position.y = 0.15;
+            robotArm.rotatingBase.add(rotatingBaseMesh);
+
+            robotArm.shoulder = new THREE.Group();
+            robotArm.shoulder.position.y = 0.3;
+            robotArm.rotatingBase.add(robotArm.shoulder);
+
+            var shoulderJointGeom = new THREE.SphereGeometry(0.28, 32, 32);
+            var shoulderJoint = new THREE.Mesh(shoulderJointGeom, jointMaterial);
+            robotArm.shoulder.add(shoulderJoint);
+
+            var upperArmGeom = new THREE.BoxGeometry(0.22, 1.5, 0.26);
+            var upperArm = new THREE.Mesh(upperArmGeom, armMaterial);
+            upperArm.position.y = 0.75;
+            robotArm.shoulder.add(upperArm);
+
+            robotArm.elbow = new THREE.Group();
+            robotArm.elbow.position.y = 1.5;
+            robotArm.shoulder.add(robotArm.elbow);
+
+            var elbowJointGeom = new THREE.SphereGeometry(0.22, 32, 32);
+            var elbowJoint = new THREE.Mesh(elbowJointGeom, jointMaterial);
+            robotArm.elbow.add(elbowJoint);
+
+            var forearmGeom = new THREE.BoxGeometry(0.18, 1.2, 0.22);
+            var forearm = new THREE.Mesh(forearmGeom, armMaterial);
+            forearm.position.y = 0.6;
+            robotArm.elbow.add(forearm);
+
+            robotArm.wrist = new THREE.Group();
+            robotArm.wrist.position.y = 1.2;
+            robotArm.elbow.add(robotArm.wrist);
+
+            var wristJointGeom = new THREE.SphereGeometry(0.15, 32, 32);
+            var wristJoint = new THREE.Mesh(wristJointGeom, jointMaterial);
+            robotArm.wrist.add(wristJoint);
+
+            robotArm.wristRoll = new THREE.Group();
+            robotArm.wrist.add(robotArm.wristRoll);
+
+            var wristExtensionGeom = new THREE.CylinderGeometry(0.1, 0.1, 0.3, 32);
+            var wristExtension = new THREE.Mesh(wristExtensionGeom, armMaterialDark);
+            wristExtension.position.y = 0.15;
+            robotArm.wristRoll.add(wristExtension);
+
+            // Welding electrode details
+            var torchBodyGeom = new THREE.CylinderGeometry(0.08, 0.12, 0.25, 16);
+            var torchMaterial = new THREE.MeshPhongMaterial({ color: 0x333333, shininess: 80 });
+            var torchBody = new THREE.Mesh(torchBodyGeom, torchMaterial);
+            torchBody.position.y = 0.35;
+            robotArm.wristRoll.add(torchBody);
+            
+            var handleGeom = new THREE.CylinderGeometry(0.06, 0.06, 0.15, 16);
+            var handleMaterial = new THREE.MeshPhongMaterial({ color: 0x1a1a1a });
+            var handle = new THREE.Mesh(handleGeom, handleMaterial);
+            handle.position.y = 0.52;
+            robotArm.wristRoll.add(handle);
+            
+            var rodGeom = new THREE.CylinderGeometry(0.02, 0.015, 0.35, 8);
+            var rodMaterial = new THREE.MeshPhongMaterial({ color: 0xcc8844, emissive: 0x331100 });
+            var rod = new THREE.Mesh(rodGeom, rodMaterial);
+            rod.position.y = 0.75;
+            robotArm.wristRoll.add(rod);
+            
+            var tipGeom = new THREE.ConeGeometry(0.025, 0.08, 8);
+            var tipMaterial = new THREE.MeshPhongMaterial({ color: 0xff6600, emissive: 0x331100 });
+            var tip = new THREE.Mesh(tipGeom, tipMaterial);
+            tip.position.y = 0.97;
+            tip.rotation.x = Math.PI;
+            robotArm.wristRoll.add(tip);
+            robotArm.weldTip = tip;
+            
+            // Local Electrodes point emitter
+            weldingLight = new THREE.PointLight(0xff6600, 0, 3);
+            weldingLight.position.y = 1.0;
+            robotArm.wristRoll.add(weldingLight);
+
+            // Setup default stance
+            robotArm.shoulder.rotation.z = -Math.PI / 6;
+            robotArm.elbow.rotation.z = Math.PI / 4;
+            robotArm.wrist.rotation.z = Math.PI / 6;
+        }
+
+        function setupRobotControls() {
+            var baseInput = document.getElementById('robot-base');
+            var shoulderInput = document.getElementById('robot-shoulder');
+            var elbowInput = document.getElementById('robot-elbow');
+            var wristInput = document.getElementById('robot-wrist');
+            var rollInput = document.getElementById('robot-roll');
+
+            if (baseInput) {
+                baseInput.addEventListener('input', function(e) {
+                    var angle = parseFloat(e.target.value);
+                    robotArm.rotatingBase.rotation.y = angle * Math.PI / 180;
+                    document.getElementById('robot-base-val').textContent = angle + '°';
+                });
+            }
+            if (shoulderInput) {
+                shoulderInput.addEventListener('input', function(e) {
+                    var angle = parseFloat(e.target.value);
+                    robotArm.shoulder.rotation.z = angle * Math.PI / 180;
+                    document.getElementById('robot-shoulder-val').textContent = angle + '°';
+                });
+            }
+            if (elbowInput) {
+                elbowInput.addEventListener('input', function(e) {
+                    var angle = parseFloat(e.target.value);
+                    robotArm.elbow.rotation.z = angle * Math.PI / 180;
+                    document.getElementById('robot-elbow-val').textContent = angle + '°';
+                });
+            }
+            if (wristInput) {
+                wristInput.addEventListener('input', function(e) {
+                    var angle = parseFloat(e.target.value);
+                    robotArm.wrist.rotation.z = angle * Math.PI / 180;
+                    document.getElementById('robot-wrist-val').textContent = angle + '°';
+                });
+            }
+            if (rollInput) {
+                rollInput.addEventListener('input', function(e) {
+                    var angle = parseFloat(e.target.value);
+                    robotArm.wristRoll.rotation.y = angle * Math.PI / 180;
+                    document.getElementById('robot-roll-val').textContent = angle + '°';
+                });
+            }
+        }
+
+        function animateRobot() {
+            robotAnimationId = requestAnimationFrame(animateRobot);
+            
+            // Driving translation
+            if (robotMovement && robotChassis) {
+                var speed = 0.03;
+                var rotSpeed = 0.02;
+                
+                switch(robotMovement) {
+                    case 'forward':
+                        robotChassis.position.z -= speed * Math.cos(robotChassis.rotation.y);
+                        robotChassis.position.x -= speed * Math.sin(robotChassis.rotation.y);
+                        rotateWheels(0.1);
+                        break;
+                    case 'backward':
+                        robotChassis.position.z += speed * Math.cos(robotChassis.rotation.y);
+                        robotChassis.position.x += speed * Math.sin(robotChassis.rotation.y);
+                        rotateWheels(-0.1);
+                        break;
+                    case 'left':
+                        robotChassis.position.x -= speed;
+                        rotateWheelsStrafe(0.1);
+                        break;
+                    case 'right':
+                        robotChassis.position.x += speed;
+                        rotateWheelsStrafe(-0.1);
+                        break;
+                    case 'rotateLeft':
+                        robotChassis.rotation.y += rotSpeed;
+                        rotateWheelsRotate(-0.1, 0.1);
+                        break;
+                    case 'rotateRight':
+                        robotChassis.rotation.y -= rotSpeed;
+                        rotateWheelsRotate(0.1, -0.1);
+                        break;
+                    case 'strafe':
+                        robotChassis.position.z += speed * 0.5;
+                        rotateWheelsStrafe(0.1);
+                        break;
+                }
+                
+                robotChassis.position.x = Math.max(-2, Math.min(2, robotChassis.position.x));
+                robotChassis.position.z = Math.max(-2, Math.min(2, robotChassis.position.z));
+            }
+            
+            // Physics Particle Updates
+            for (var i = weldingSparks.length - 1; i >= 0; i--) {
+                var spark = weldingSparks[i];
+                spark.position.add(spark.velocity);
+                spark.velocity.y -= 0.005; // pull gravity
+                spark.life--;
+                
+                if (spark.life <= 0 || spark.position.y < 0) {
+                    robotScene.remove(spark);
+                    weldingSparks.splice(i, 1);
+                }
+            }
+            
+            if (robotRenderer && robotScene && robotCamera) {
+                robotRenderer.render(robotScene, robotCamera);
+            }
+        }
+        
+        function rotateWheels(speed) {
+            for (var i = 0; i < mecanumWheels.length; i++) {
+                mecanumWheels[i].rotation.x += speed;
+            }
+        }
+        
+        function rotateWheelsStrafe(speed) {
+            if (mecanumWheels.length >= 4) {
+                mecanumWheels[0].rotation.x += speed;
+                mecanumWheels[1].rotation.x -= speed;
+                mecanumWheels[2].rotation.x -= speed;
+                mecanumWheels[3].rotation.x += speed;
+            }
+        }
+        
+        function rotateWheelsRotate(leftSpeed, rightSpeed) {
+            if (mecanumWheels.length >= 4) {
+                mecanumWheels[0].rotation.x += leftSpeed;
+                mecanumWheels[2].rotation.x += leftSpeed;
+                mecanumWheels[1].rotation.x += rightSpeed;
+                mecanumWheels[3].rotation.x += rightSpeed;
+            }
+        }
+        
+        function moveRobot(direction) {
+            robotMovement = direction;
+            if (direction === 'stop') {
+                robotMovement = null;
+            }
+        }
+        
+        function stopRobot() {
+            robotMovement = null;
+        }
+
+        // Electrical Spark Emitter loop
+        function toggleWelding() {
+            isWelding = !isWelding;
+            var btn = document.getElementById('weld-toggle');
+            var status = document.getElementById('weld-status');
+            if (btn && status) {
+                if (isWelding) {
+                    btn.classList.add('active');
+                    btn.textContent = '🔥 STOP ELECTRODE';
+                    status.textContent = 'ON';
+                    status.style.color = '#ff6600';
+                    if (weldingLight) {
+                        weldingLight.intensity = 3;
+                        weldingLight.color.setHex(0xff6600);
+                    }
+                    startWeldingSparks();
+                } else {
+                    btn.classList.remove('active');
+                    btn.textContent = '🔥 Start Welding';
+                    status.textContent = 'OFF';
+                    status.style.color = '#888';
+                    if (weldingLight) weldingLight.intensity = 0;
+                    stopWeldingSparks();
+                }
+            }
+        }
+        
+        function startWeldingSparks() {
+            if (weldingSparkInterval) return;
+            var sparkGeom = new THREE.SphereGeometry(0.02, 4, 4);
+            
+            weldingSparkInterval = setInterval(function() {
+                if (!isWelding || !robotArm.wristRoll) return;
+                
+                var tipPos = new THREE.Vector3(0, 1.0, 0);
+                robotArm.wristRoll.localToWorld(tipPos);
+                
+                for (var i = 0; i < 5; i++) {
+                    var colors = [0xffff00, 0xff6600, 0xff4400, 0xffaa00, 0xffffff];
+                    var spark = new THREE.Mesh(
+                        sparkGeom, 
+                        new THREE.MeshBasicMaterial({ color: colors[Math.floor(Math.random() * colors.length)] })
+                    );
+                    spark.position.copy(tipPos);
+                    spark.velocity = new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.15,
+                        -Math.random() * 0.1 - 0.05,
+                        (Math.random() - 0.5) * 0.15
+                    );
+                    spark.life = 30;
+                    robotScene.add(spark);
+                    weldingSparks.push(spark);
+                }
+                
+                if (weldingLight) {
+                    weldingLight.intensity = 2 + Math.random() * 2;
+                }
+            }, 50);
+        }
+        
+        function stopWeldingSparks() {
+            if (weldingSparkInterval) {
+                clearInterval(weldingSparkInterval);
+                weldingSparkInterval = null;
+            }
+            weldingSparks.forEach(function(spark) {
+                if (robotScene) robotScene.remove(spark);
+            });
+            weldingSparks = [];
+        }
+
+        // Window load instantiation sequence
+        window.onload = function() {
+            initRobotArm();
+        };
+    </script>
+</body>
+</html>
