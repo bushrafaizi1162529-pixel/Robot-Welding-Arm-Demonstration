@@ -1,0 +1,294 @@
+#include <Servo.h>
+
+// ======================
+// SERVO DEFINITIONS
+// ======================
+Servo baseServo;
+Servo shoulderServo;
+Servo elbowServo;
+Servo torchServo;
+
+// ======================
+// PIN DEFINITIONS
+// ======================
+const int weldingRelay = 10;
+const int weldingLED = 11;
+const int sparkLED = 12;
+
+// ======================
+// POSITION VARIABLES
+// ======================
+int basePos = 90;
+int shoulderPos = 90;
+int elbowPos = 90;
+int torchPos = 90;
+
+bool weldingState = false;
+
+// ======================
+// SMOOTH MOVEMENT
+// ======================
+void moveServoSmooth(
+  Servo &servo,
+  int &currentPos,
+  int targetPos,
+  int speedDelay)
+{
+  if(currentPos < targetPos)
+  {
+    for(int pos=currentPos; pos<=targetPos; pos++)
+    {
+      servo.write(pos);
+      delay(speedDelay);
+    }
+  }
+  else
+  {
+    for(int pos=currentPos; pos>=targetPos; pos--)
+    {
+      servo.write(pos);
+      delay(speedDelay);
+    }
+  }
+
+  currentPos = targetPos;
+}
+
+// ======================
+// WELDING FUNCTIONS
+// ======================
+void startWelding()
+{
+  Serial.println("WELDING START");
+
+  digitalWrite(weldingRelay, HIGH);
+  digitalWrite(weldingLED, HIGH);
+
+  weldingState = true;
+}
+
+void stopWelding()
+{
+  Serial.println("WELDING STOP");
+
+  digitalWrite(weldingRelay, LOW);
+  digitalWrite(weldingLED, LOW);
+  digitalWrite(sparkLED, LOW);
+
+  weldingState = false;
+}
+
+// ======================
+// SPARK EFFECT
+// ======================
+void simulateSparks()
+{
+  if(!weldingState) return;
+
+  digitalWrite(sparkLED, HIGH);
+  delay(random(30,80));
+
+  digitalWrite(sparkLED, LOW);
+  delay(random(20,60));
+}
+
+// ======================
+// TORCH CONTROL
+// ======================
+void torchDown()
+{
+  moveServoSmooth(
+    torchServo,
+    torchPos,
+    120,
+    10
+  );
+}
+
+void torchUp()
+{
+  moveServoSmooth(
+    torchServo,
+    torchPos,
+    90,
+    10
+  );
+}
+
+// ======================
+// WELD PATH 1
+// ======================
+void weldPathOne()
+{
+  Serial.println("PATH 1");
+
+  moveServoSmooth(baseServo,basePos,60,10);
+  moveServoSmooth(shoulderServo,shoulderPos,110,10);
+  moveServoSmooth(elbowServo,elbowPos,130,10);
+
+  torchDown();
+
+  startWelding();
+
+  for(int i=60;i<=120;i++)
+  {
+    baseServo.write(i);
+    simulateSparks();
+    delay(25);
+  }
+
+  stopWelding();
+
+  torchUp();
+}
+
+// ======================
+// WELD PATH 2
+// ======================
+void weldPathTwo()
+{
+  Serial.println("PATH 2");
+
+  moveServoSmooth(baseServo,basePos,120,10);
+  moveServoSmooth(shoulderServo,shoulderPos,95,10);
+  moveServoSmooth(elbowServo,elbowPos,100,10);
+
+  torchDown();
+
+  startWelding();
+
+  for(int i=120;i>=60;i--)
+  {
+    baseServo.write(i);
+
+    simulateSparks();
+
+    delay(25);
+  }
+
+  stopWelding();
+
+  torchUp();
+}
+
+// ======================
+// WELD PATH 3
+// ======================
+void weldPathThree()
+{
+  Serial.println("PATH 3");
+
+  moveServoSmooth(baseServo,basePos,90,10);
+  moveServoSmooth(shoulderServo,shoulderPos,125,10);
+  moveServoSmooth(elbowServo,elbowPos,80,10);
+
+  torchDown();
+
+  startWelding();
+
+  for(int i=90;i<=150;i++)
+  {
+    baseServo.write(i);
+
+    simulateSparks();
+
+    delay(20);
+  }
+
+  stopWelding();
+
+  torchUp();
+}
+
+// ======================
+// RETURN HOME
+// ======================
+void homePosition()
+{
+  Serial.println("HOME POSITION");
+
+  moveServoSmooth(baseServo,basePos,90,10);
+  moveServoSmooth(shoulderServo,shoulderPos,90,10);
+  moveServoSmooth(elbowServo,elbowPos,90,10);
+  moveServoSmooth(torchServo,torchPos,90,10);
+}
+
+// ======================
+// EMERGENCY STOP
+// ======================
+void emergencyStop()
+{
+  stopWelding();
+
+  Serial.println("EMERGENCY STOP");
+
+  while(true)
+  {
+    digitalWrite(weldingLED,HIGH);
+    delay(200);
+
+    digitalWrite(weldingLED,LOW);
+    delay(200);
+  }
+}
+
+// ======================
+// AUTOMATIC WELD CYCLE
+// ======================
+void performAutomaticCycle()
+{
+  weldPathOne();
+
+  delay(1000);
+
+  weldPathTwo();
+
+  delay(1000);
+
+  weldPathThree();
+
+  delay(1000);
+
+  homePosition();
+
+  Serial.println("CYCLE COMPLETE");
+}
+
+// ======================
+// SETUP
+// ======================
+void setup()
+{
+  Serial.begin(9600);
+
+  randomSeed(analogRead(A0));
+
+  baseServo.attach(3);
+  shoulderServo.attach(5);
+  elbowServo.attach(6);
+  torchServo.attach(9);
+
+  pinMode(weldingRelay,OUTPUT);
+  pinMode(weldingLED,OUTPUT);
+  pinMode(sparkLED,OUTPUT);
+
+  digitalWrite(weldingRelay,LOW);
+  digitalWrite(weldingLED,LOW);
+  digitalWrite(sparkLED,LOW);
+
+  homePosition();
+
+  delay(2000);
+
+  Serial.println("ROBOT WELDING ARM READY");
+}
+
+// ======================
+// MAIN LOOP
+// ======================
+void loop()
+{
+  performAutomaticCycle();
+
+  delay(5000);
+}
